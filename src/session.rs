@@ -236,12 +236,11 @@ pub fn open_with_buffers(
         let dev = V4LCaptureDevice::new_with_buffers(index, requested, buffer_count)?;
         return Ok(OpenedCamera::from_device(Box::new(dev)));
     }
+
     #[allow(unreachable_code)]
     {
-        let _ = (index, requested);
-        Err(NokhwaError::general(
-            "this operation is not supported by the current platform/feature configuration",
-        ))
+        _ = (buffer_count, requested);
+        return open(index, req);
     }
 }
 
