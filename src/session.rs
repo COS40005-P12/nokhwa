@@ -174,7 +174,7 @@ pub fn open(index: CameraIndex, req: OpenRequest) -> Result<OpenedCamera, Nokhwa
     #[cfg(all(target_os = "linux", feature = "input-v4l"))]
     {
         use nokhwa_bindings_linux_v4l::V4LCaptureDevice;
-        let dev = V4LCaptureDevice::new(&index, requested)?;
+        let dev = V4LCaptureDevice::new(index, requested)?;
         return Ok(OpenedCamera::from_device(Box::new(dev)));
     }
     #[cfg(all(
@@ -233,7 +233,7 @@ pub fn open_with_buffers(
     #[cfg(all(target_os = "linux", feature = "input-v4l"))]
     {
         use nokhwa_bindings_linux_v4l::V4LCaptureDevice;
-        let dev = V4LCaptureDevice::new_with_buffers(&index, requested, buffer_count)?;
+        let dev = V4LCaptureDevice::new_with_buffers(index, requested, buffer_count)?;
         return Ok(OpenedCamera::from_device(Box::new(dev)));
     }
     #[allow(unreachable_code)]

@@ -341,7 +341,7 @@ mod internal {
     };
 
     impl V4LCaptureDevice {
-        pub fn new(index: &CameraIndex, cam_fmt: RequestedFormat) -> Result<Self, NokhwaError> {
+        pub fn new(index: CameraIndex, cam_fmt: RequestedFormat) -> Result<Self, NokhwaError> {
             Self::new_with_buffers(index, cam_fmt, 4)
         }
 
@@ -350,12 +350,10 @@ mod internal {
         /// This function will error if the camera is currently busy or if `V4L2` can't read device information.
         #[allow(clippy::too_many_lines)]
         pub fn new_with_buffers(
-            index: &CameraIndex,
+            index: CameraIndex,
             cam_fmt: RequestedFormat,
             buffer_count: u32,
         ) -> Result<Self, NokhwaError> {
-            let index = index.clone();
-
             let shared_device = new_shared_device(index.as_index()? as usize)?;
             let device = shared_device
                 .lock()
