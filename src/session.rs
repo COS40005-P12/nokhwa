@@ -213,6 +213,38 @@ pub fn open(index: CameraIndex, req: OpenRequest) -> Result<OpenedCamera, Nokhwa
     }
 }
 
+pub fn open_with_buffers(
+    index: CameraIndex,
+    req: OpenRequest,
+    buffer_count: u32,
+) -> Result<OpenedCamera, NokhwaError> {
+    use nokhwa_core::types::{color_frame_formats, RequestedFormat, RequestedFormatType};
+
+    let requested = match req.format {
+        Some(fmt) => {
+            RequestedFormat::with_formats(RequestedFormatType::Exact(fmt), color_frame_formats())
+        },
+        None => RequestedFormat::with_formats(
+            RequestedFormatType::AbsoluteHighestResolution,
+            color_frame_formats(),
+        ),
+    };
+
+    #[cfg(all(target_os = "linux", feature = "input-v4l"))]
+    {
+        use nokhwa_bindings_linux_v4l::V4LCaptureDevice;
+        let dev = V4LCaptureDevice::new_with_buffers(&index, requested, buffer_count)?;
+        return Ok(OpenedCamera::from_device(Box::new(dev)));
+    }
+    #[allow(unreachable_code)]
+    {
+        let _ = (index, requested);
+        Err(NokhwaError::general(
+            "this operation is not supported by the current platform/feature configuration",
+        ))
+    }
+}
+
 /// An opened camera, dispatched by backend capability.
 pub enum OpenedCamera {
     /// Stream-only backend (e.g. a webcam).

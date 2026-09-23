@@ -325,6 +325,7 @@ mod internal {
         device: SharedDevice,
         camera_format: CameraFormat,
         camera_info: CameraInfo,
+        buffer_count: u32,
     }
 
     // Compile-time assertion: `V4LCaptureDevice: 'static`. The `'static` bound
@@ -340,11 +341,19 @@ mod internal {
     };
 
     impl V4LCaptureDevice {
+        pub fn new(index: &CameraIndex, cam_fmt: RequestedFormat) -> Result<Self, NokhwaError> {
+            Self::new_with_buffers(index, cam_fmt, 4)
+        }
+
         /// Creates a new capture device using the `V4L2` backend. Indexes are gives to devices by the OS, and usually numbered by order of discovery.
         /// # Errors
         /// This function will error if the camera is currently busy or if `V4L2` can't read device information.
         #[allow(clippy::too_many_lines)]
-        pub fn new(index: &CameraIndex, cam_fmt: RequestedFormat) -> Result<Self, NokhwaError> {
+        pub fn new_with_buffers(
+            index: &CameraIndex,
+            cam_fmt: RequestedFormat,
+            buffer_count: u32,
+        ) -> Result<Self, NokhwaError> {
             let index = index.clone();
 
             let shared_device = new_shared_device(index.as_index()? as usize)?;
@@ -469,6 +478,7 @@ mod internal {
                 camera_info,
                 device: shared_device,
                 stream_handle: None,
+                buffer_count,
             };
 
             v4l2.force_refresh_camera_format()?;
@@ -867,16 +877,19 @@ mod internal {
             // intentional — the `FrameSource` contract permits it.
             // Disable mut warning, since mut is only required when not using arena buffers
             #[allow(unused_mut)]
-            let mut stream =
-                match MmapStream::new(&*self.lock_device()?, v4l::buffer::Type::VideoCapture) {
-                    Ok(s) => s,
-                    Err(why) => {
-                        return Err(NokhwaError::OpenStreamError {
-                            message: why.to_string(),
-                            backend: Some(ApiBackend::Video4Linux),
-                        })
-                    },
-                };
+            let mut stream = match MmapStream::with_buffers(
+                &*self.lock_device()?,
+                v4l::buffer::Type::VideoCapture,
+                self.buffer_count,
+            ) {
+                Ok(s) => s,
+                Err(why) => {
+                    return Err(NokhwaError::OpenStreamError {
+                        message: why.to_string(),
+                        backend: Some(ApiBackend::Video4Linux),
+                    })
+                },
+            };
 
             // Explicitly start now, or won't work with the RPi. As a consequence, buffers will only be used as required.
             // WARNING: This will cause drop of half of the frames
