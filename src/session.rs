@@ -373,6 +373,13 @@ impl StreamCamera {
     }
 }
 
+impl From<HybridCamera> for StreamCamera {
+    fn from(value: HybridCamera) -> Self {
+        let inner: Box<dyn FrameSource + Send> = value.inner;
+        Self { inner }
+    }
+}
+
 // ─────────────────────────── ShutterCamera ────────────────────────────
 
 /// Wrapper for shutter-capture-only backends.
@@ -446,6 +453,13 @@ impl ShutterCamera {
     /// Propagates the backend's error.
     pub fn capture(&mut self, timeout: Duration) -> Result<Buffer, NokhwaError> {
         self.inner.capture(timeout)
+    }
+}
+
+impl From<HybridCamera> for ShutterCamera {
+    fn from(value: HybridCamera) -> Self {
+        let inner: Box<dyn ShutterCapture + Send> = value.inner;
+        Self { inner }
     }
 }
 
