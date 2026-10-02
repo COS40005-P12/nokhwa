@@ -1,10 +1,12 @@
 use crate::error::NokhwaError;
 use crate::format_types::CaptureFormat;
+use num_rational::Ratio;
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
+    ops::Sub,
     str::FromStr,
 };
 
@@ -217,6 +219,7 @@ impl RequestedFormat<'_> {
                     .copied()
             },
             RequestedFormatType::HighestFrameRate(fps) => {
+                let fps = FrameRate::from_fps(fps);
                 let highest_res = all_formats
                     .iter()
                     .filter(|x| x.frame_rate == fps && self.wanted_decoder.contains(&x.format()))
@@ -270,15 +273,15 @@ impl RequestedFormat<'_> {
                         }
                         None
                     })
-                    .collect::<Vec<u32>>();
+                    .collect::<Vec<FrameRate>>();
                 // sort FPSes
                 let mut framerate_map = frame_rates
                     .iter()
                     .map(|x| {
-                        let abs = *x as i32 - c.frame_rate() as i32;
-                        (abs.unsigned_abs(), *x)
+                        let abs = *x - c.frame_rate();
+                        (abs, *x)
                     })
-                    .collect::<Vec<(u32, u32)>>();
+                    .collect::<Vec<(FrameRate, FrameRate)>>();
                 framerate_map.sort_by_key(|a| a.0);
                 let frame_rate = framerate_map.first()?.1;
                 Some(CameraFormat::new(resolution, c.format(), frame_rate))
@@ -589,20 +592,136 @@ impl Ord for Resolution {
     }
 }
 
+/// A new type for the capture rate of a camera in frames per second.
+///
+/// The inner value of this type is an `Option<>`.`
+/// This is because some cameras will not report a legitimate framerate
+/// (where the denominator for the fps ratio is zero).
+/// In these cases, the framerate will instead be None.
+/// This must be handled by each call to get the framerate.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+pub struct FrameRate {
+    fraction: Option<Ratio<u32>>,
+}
+
+impl FrameRate {
+    pub fn new(numerator: u32, denominator: u32) -> Self {
+        // Neither numerator or denominator can be zero
+        if denominator == 0 || numerator == 0 {
+            Self { fraction: None }
+        } else {
+            Self {
+                fraction: Some(Ratio::<u32>::new(numerator, denominator)),
+            }
+        }
+    }
+
+    // Helper function to check if the framerate exists. If it does not, then the framerate is invalid.
+    pub fn exists(&self) -> bool {
+        self.fraction.is_some()
+    }
+
+    pub fn from_fps(fps: u32) -> Self {
+        Self {
+            fraction: Some(Ratio::<u32>::new(fps, 1)),
+        }
+    }
+
+    /// If framerate exists, returns the numerator.
+    ///
+    /// If framerate does not exists, returns 0.
+    pub fn numerator(&self) -> u32 {
+        match self.fraction {
+            Some(ratio) => *ratio.numer(),
+            None => 0,
+        }
+    }
+
+    /// If framerate exists, returns the denominator.
+    ///
+    /// If framerate does not exists, returns 0.
+    pub fn denominator(&self) -> u32 {
+        match self.fraction {
+            Some(ratio) => *ratio.denom(),
+            None => 0,
+        }
+    }
+}
+
+impl Default for FrameRate {
+    fn default() -> Self {
+        FrameRate {
+            fraction: Some(Ratio::<u32>::new(30, 1)),
+        }
+    }
+}
+
+impl Display for FrameRate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.fraction {
+            Some(_) => write!(f, "{}/{}", self.numerator(), self.denominator()),
+            None => write!(f, ""),
+        }
+    }
+}
+
+impl From<Ratio<u32>> for FrameRate {
+    fn from(value: Ratio<u32>) -> Self {
+        FrameRate {
+            fraction: Some(value),
+        }
+    }
+}
+
+/// Subtracts two [`FrameRate`]s and returns the result as a new [`FrameRate`].
+/// 
+/// Underflow is handled by first converting to i32, subtracting, and then converting back to u32.
+/// This will return the absolute value of the operation.
+impl Sub for FrameRate {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.fraction == None || rhs.fraction == None {
+            // This will build a FrameRate with a None value, which is invalid.
+            // This should be avoided where possible.
+            FrameRate::new(0, 0)
+        } else {
+            let lhs: Ratio<i32> = Ratio::<i32>::new(
+                *self.fraction.unwrap().numer() as i32,
+                *self.fraction.unwrap().denom() as i32,
+            );
+            let rhs: Ratio<i32> = Ratio::<i32>::new(
+                *rhs.fraction.unwrap().numer() as i32,
+                *rhs.fraction.unwrap().denom() as i32,
+            );
+
+            let result = lhs - rhs;
+
+            FrameRate {
+                fraction: Some(Ratio::<u32>::new(
+                    result.numer().abs() as u32,
+                    result.denom().abs() as u32,
+                )),
+            }
+        }
+    }
+}
+
 /// This is a convenience struct that holds all information about the format of a webcam stream.
-/// It consists of a [`Resolution`], [`FrameFormat`], and a frame rate(u8).
+/// It consists of a [`Resolution`], [`FrameFormat`], and a [`FrameRate`].
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct CameraFormat {
     resolution: Resolution,
     format: FrameFormat,
-    frame_rate: u32,
+    frame_rate: FrameRate,
 }
 
 impl CameraFormat {
     /// Construct a new [`CameraFormat`]
     #[must_use]
-    pub fn new(resolution: Resolution, format: FrameFormat, frame_rate: u32) -> Self {
+    pub fn new(resolution: Resolution, format: FrameFormat, frame_rate: FrameRate) -> Self {
         CameraFormat {
             resolution,
             format,
@@ -612,7 +731,7 @@ impl CameraFormat {
 
     /// [`CameraFormat::new()`], but raw.
     #[must_use]
-    pub fn new_from(res_x: u32, res_y: u32, format: FrameFormat, fps: u32) -> Self {
+    pub fn new_from(res_x: u32, res_y: u32, format: FrameFormat, fps: FrameRate) -> Self {
         CameraFormat {
             resolution: Resolution {
                 width_x: res_x,
@@ -648,12 +767,12 @@ impl CameraFormat {
 
     /// Get the frame rate of the current [`CameraFormat`]
     #[must_use]
-    pub fn frame_rate(&self) -> u32 {
+    pub fn frame_rate(&self) -> FrameRate {
         self.frame_rate
     }
 
     /// Set the [`CameraFormat`]'s frame rate.
-    pub fn set_frame_rate(&mut self, frame_rate: u32) {
+    pub fn set_frame_rate(&mut self, frame_rate: FrameRate) {
         self.frame_rate = frame_rate;
     }
 
@@ -674,7 +793,7 @@ impl Default for CameraFormat {
         CameraFormat {
             resolution: Resolution::new(640, 480),
             format: FrameFormat::MJPEG,
-            frame_rate: 30,
+            frame_rate: FrameRate::default(),
         }
     }
 }
