@@ -24,14 +24,8 @@
 #[cfg(target_os = "linux")]
 mod internal {
     use nokhwa_core::{
-        buffer::{Buffer, TimestampKind},
-        error::NokhwaError,
-        traits::{CameraDevice, FrameSource},
-        types::{
-            ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo,
-            ControlValueDescription, ControlValueSetter, FrameFormat, KnownCameraControl,
-            KnownCameraControlFlag, MenuEntry, MenuItem as NokhwaMenuItem, RequestedFormat,
-            Resolution,
+        buffer::{Buffer, TimestampKind}, error::NokhwaError, traits::{CameraDevice, FrameSource}, types::{
+            ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo, ControlValueDescription, ControlValueSetter, FrameFormat, FrameRate, KnownCameraControl, KnownCameraControlFlag, MenuEntry, MenuItem as NokhwaMenuItem, RequestedFormat, Resolution,
         },
     };
     use std::{
@@ -238,7 +232,7 @@ mod internal {
         match interval {
             FrameIntervalEnum::Discrete(dis) => {
                 if dis.numerator == 1 {
-                    vec![CameraFormat::new(resolution, fmt, dis.denominator)]
+                    vec![CameraFormat::new(resolution, fmt, FrameRate::from_fps(dis.denominator))]
                 } else {
                     vec![]
                 }
@@ -252,7 +246,7 @@ mod internal {
                 }
                 (step.min.numerator..=step.max.numerator)
                     .step_by(step.step.numerator as usize)
-                    .map(|fps| CameraFormat::new(resolution, fmt, fps))
+                    .map(|fps| CameraFormat::new(resolution, fmt, FrameRate::from_fps(fps)))
                     .collect()
             },
         }
@@ -274,7 +268,7 @@ mod internal {
                 Ok(CameraFormat::new(
                     Resolution::new(format.width, format.height),
                     frame_format,
-                    fps,
+                    FrameRate::from_fps(fps),
                 ))
             },
             Err(why) => Err(NokhwaError::get_property("parameters", why.to_string())),
@@ -443,7 +437,8 @@ mod internal {
             }
 
             if current_format.frame_rate() != format.frame_rate() {
-                if let Err(why) = device.set_params(&Parameters::with_fps(format.frame_rate())) {
+                // format.framerate().denominator() assumes that the numerator is 1.
+                if let Err(why) = device.set_params(&Parameters::with_fps(format.frame_rate().denominator())) {
                     return Err(NokhwaError::set_property(
                         "Frame rate",
                         format.frame_rate().to_string(),
@@ -766,7 +761,8 @@ mod internal {
             let v4l_fcc = frameformat_to_fourcc(new_fmt.format());
 
             let format = Format::new(new_fmt.width(), new_fmt.height(), v4l_fcc);
-            let frame_rate = Parameters::with_fps(new_fmt.frame_rate());
+            // frame_rate().denominator() assumes that the numerator is 1.
+            let frame_rate = Parameters::with_fps(new_fmt.frame_rate().denominator());
 
             {
                 let device = self.lock_device()?;
