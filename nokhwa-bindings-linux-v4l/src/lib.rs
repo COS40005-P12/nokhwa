@@ -269,7 +269,7 @@ mod internal {
                     .ok_or(NokhwaError::get_property("FrameFormat", "unsupported"))?;
 
                 let fps = match device.params() {
-                    Ok(params) => interval_to_fps(params.interval)?,
+                    Ok(params) => interval_to_fps(params.interval),
                     Err(why) => {
                         return Err(NokhwaError::get_property("V4L2 FrameRate", why.to_string()))
                     },
@@ -278,7 +278,7 @@ mod internal {
                 Ok(CameraFormat::new(
                     Resolution::new(format.width, format.height),
                     frame_format,
-                    FrameRate::from_fps(fps),
+                    fps,
                 ))
             },
             Err(why) => Err(NokhwaError::get_property("parameters", why.to_string())),
@@ -1100,17 +1100,8 @@ mod internal {
     /// pinned without a real `v4l::Device`. The previous inline
     /// shape carried a dead `else` branch that the upstream
     /// `numerator != 1` guard made unreachable.
-    fn interval_to_fps(interval: v4l::Fraction) -> Result<u32, NokhwaError> {
-        if interval.numerator != 1 {
-            return Err(NokhwaError::get_property(
-                "V4L2 FrameRate",
-                format!(
-                    "Framerate not whole number: {} / {}",
-                    interval.denominator, interval.numerator
-                ),
-            ));
-        }
-        Ok(interval.denominator)
+    fn interval_to_fps(interval: v4l::Fraction) -> FrameRate {
+        FrameRate:: new(interval.numerator, interval.denominator)
     }
 
     /// Convert a V4L2 `CLOCK_MONOTONIC` timestamp to a wallclock Duration since `UNIX_EPOCH`.
