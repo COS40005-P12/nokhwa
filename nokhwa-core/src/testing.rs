@@ -745,7 +745,11 @@ mod tests {
         assert_eq!(default_fmt.format(), FrameFormat::YUYV);
         assert_eq!(default_fmt.frame_rate(), FrameRate::from_fps(30));
 
-        let new_fmt = CameraFormat::new(Resolution::new(1920, 1080), FrameFormat::MJPEG, FrameRate::from_fps(60));
+        let new_fmt = CameraFormat::new(
+            Resolution::new(1920, 1080),
+            FrameFormat::MJPEG,
+            FrameRate::from_fps(60),
+        );
         src.set_format(new_fmt).unwrap();
         assert_eq!(src.negotiated_format(), new_fmt);
         assert_eq!(src.compatible_formats().unwrap(), vec![new_fmt]);

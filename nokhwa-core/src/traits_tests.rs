@@ -21,7 +21,7 @@ use crate::traits::{
 };
 use crate::types::{
     ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo, ControlValueSetter,
-    FrameFormat, KnownCameraControl, Resolution, FrameRate,
+    FrameFormat, FrameRate, KnownCameraControl, Resolution,
 };
 use std::borrow::Cow;
 use std::time::Duration;

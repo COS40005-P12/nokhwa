@@ -675,7 +675,7 @@ impl From<Ratio<u32>> for FrameRate {
 }
 
 /// Subtracts two [`FrameRate`]s and returns the result as a new [`FrameRate`].
-/// 
+///
 /// Underflow is handled by first converting to i32, subtracting, and then converting back to u32.
 /// This will return the absolute value of the operation.
 impl Sub for FrameRate {

@@ -24,8 +24,14 @@
 #[cfg(target_os = "linux")]
 mod internal {
     use nokhwa_core::{
-        buffer::{Buffer, TimestampKind}, error::NokhwaError, traits::{CameraDevice, FrameSource}, types::{
-            ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo, ControlValueDescription, ControlValueSetter, FrameFormat, FrameRate, KnownCameraControl, KnownCameraControlFlag, MenuEntry, MenuItem as NokhwaMenuItem, RequestedFormat, Resolution,
+        buffer::{Buffer, TimestampKind},
+        error::NokhwaError,
+        traits::{CameraDevice, FrameSource},
+        types::{
+            ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo,
+            ControlValueDescription, ControlValueSetter, FrameFormat, FrameRate,
+            KnownCameraControl, KnownCameraControlFlag, MenuEntry, MenuItem as NokhwaMenuItem,
+            RequestedFormat, Resolution,
         },
     };
     use std::{
@@ -232,7 +238,11 @@ mod internal {
         match interval {
             FrameIntervalEnum::Discrete(dis) => {
                 if dis.numerator == 1 {
-                    vec![CameraFormat::new(resolution, fmt, FrameRate::from_fps(dis.denominator))]
+                    vec![CameraFormat::new(
+                        resolution,
+                        fmt,
+                        FrameRate::from_fps(dis.denominator),
+                    )]
                 } else {
                     vec![]
                 }
@@ -438,7 +448,9 @@ mod internal {
 
             if current_format.frame_rate() != format.frame_rate() {
                 // format.framerate().denominator() assumes that the numerator is 1.
-                if let Err(why) = device.set_params(&Parameters::with_fps(format.frame_rate().denominator())) {
+                if let Err(why) =
+                    device.set_params(&Parameters::with_fps(format.frame_rate().denominator()))
+                {
                     return Err(NokhwaError::set_property(
                         "Frame rate",
                         format.frame_rate().to_string(),

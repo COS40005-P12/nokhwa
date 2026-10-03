@@ -295,8 +295,10 @@ fn camera_info_display_renders_name_description_extra_index() {
 
 #[test]
 fn camera_format_ordering_is_lexicographic_resolution_format_framerate() {
-    let small_low_fps = CameraFormat::new_from(640, 480, FrameFormat::MJPEG, FrameRate::from_fps(30));
-    let small_high_fps = CameraFormat::new_from(640, 480, FrameFormat::MJPEG, FrameRate::from_fps(60));
+    let small_low_fps =
+        CameraFormat::new_from(640, 480, FrameFormat::MJPEG, FrameRate::from_fps(30));
+    let small_high_fps =
+        CameraFormat::new_from(640, 480, FrameFormat::MJPEG, FrameRate::from_fps(60));
     let small_yuyv = CameraFormat::new_from(640, 480, FrameFormat::YUYV, FrameRate::from_fps(30));
     let big = CameraFormat::new_from(1920, 1080, FrameFormat::MJPEG, FrameRate::from_fps(30));
 
@@ -472,7 +474,8 @@ fn closest_format_when_exact_resolution_unavailable() {
     ];
 
     // Request 1280x720 which doesn't exist in the available formats
-    let requested_fmt = CameraFormat::new_from(1280, 720, FrameFormat::MJPEG, FrameRate::from_fps(30));
+    let requested_fmt =
+        CameraFormat::new_from(1280, 720, FrameFormat::MJPEG, FrameRate::from_fps(30));
     let req = RequestedFormat::with_formats(
         RequestedFormatType::Closest(requested_fmt),
         &[FrameFormat::MJPEG],
@@ -548,7 +551,12 @@ fn fulfill_highest_resolution_at_given_resolution() {
 
 #[test]
 fn fulfill_highest_resolution_no_match() {
-    let available = vec![CameraFormat::new_from(640, 480, FrameFormat::MJPEG, FrameRate::from_fps(30))];
+    let available = vec![CameraFormat::new_from(
+        640,
+        480,
+        FrameFormat::MJPEG,
+        FrameRate::from_fps(30),
+    )];
     let req = RequestedFormat::with_formats(
         RequestedFormatType::HighestResolution(Resolution::new(1920, 1080)),
         &[FrameFormat::MJPEG],
@@ -638,7 +646,12 @@ fn fulfill_exact_match() {
 fn fulfill_exact_not_in_available_still_returns() {
     // Exact does not check membership — it only validates the decoder match.
     let target = CameraFormat::new_from(4096, 2160, FrameFormat::MJPEG, FrameRate::from_fps(120));
-    let available = vec![CameraFormat::new_from(640, 480, FrameFormat::MJPEG, FrameRate::from_fps(30))];
+    let available = vec![CameraFormat::new_from(
+        640,
+        480,
+        FrameFormat::MJPEG,
+        FrameRate::from_fps(30),
+    )];
     let req =
         RequestedFormat::with_formats(RequestedFormatType::Exact(target), &[FrameFormat::MJPEG]);
     let result = req.fulfill(&available).unwrap();
@@ -987,7 +1000,12 @@ fn requested_format_new_constrains_to_marker_format_mjpeg() {
 fn requested_format_new_returns_none_when_no_compatible_format() {
     use crate::format_types::RawRgb;
     let req = RequestedFormat::new::<RawRgb>(RequestedFormatType::AbsoluteHighestResolution);
-    let available = vec![CameraFormat::new_from(1920, 1080, FrameFormat::MJPEG, FrameRate::from_fps(30))];
+    let available = vec![CameraFormat::new_from(
+        1920,
+        1080,
+        FrameFormat::MJPEG,
+        FrameRate::from_fps(30),
+    )];
     assert!(
         req.fulfill(&available).is_none(),
         "RequestedFormat::new::<RawRgb> must not accept an MJPEG-only device"
@@ -2567,8 +2585,12 @@ fn requested_format_type_display_matches_debug() {
     let abs_res = RequestedFormatType::AbsoluteHighestResolution;
     assert_eq!(abs_res.to_string(), "AbsoluteHighestResolution");
 
-    let exact =
-        RequestedFormatType::Exact(CameraFormat::new_from(1920, 1080, FrameFormat::MJPEG, FrameRate::from_fps(30)));
+    let exact = RequestedFormatType::Exact(CameraFormat::new_from(
+        1920,
+        1080,
+        FrameFormat::MJPEG,
+        FrameRate::from_fps(30),
+    ));
     assert_eq!(exact.to_string(), format!("{exact:?}"));
 }
 
@@ -2595,8 +2617,12 @@ fn requested_format_type_display_matches_debug_all_remaining_variants() {
     let highest_fps = RequestedFormatType::HighestFrameRate(60);
     assert_eq!(highest_fps.to_string(), format!("{highest_fps:?}"));
 
-    let closest =
-        RequestedFormatType::Closest(CameraFormat::new_from(1280, 720, FrameFormat::YUYV, FrameRate::from_fps(30)));
+    let closest = RequestedFormatType::Closest(CameraFormat::new_from(
+        1280,
+        720,
+        FrameFormat::YUYV,
+        FrameRate::from_fps(30),
+    ));
     assert_eq!(closest.to_string(), format!("{closest:?}"));
 }
 
