@@ -1101,7 +1101,7 @@ mod internal {
     /// shape carried a dead `else` branch that the upstream
     /// `numerator != 1` guard made unreachable.
     fn interval_to_fps(interval: v4l::Fraction) -> FrameRate {
-        FrameRate:: new(interval.numerator, interval.denominator)
+        FrameRate::new(interval.numerator, interval.denominator)
     }
 
     /// Convert a V4L2 `CLOCK_MONOTONIC` timestamp to a wallclock Duration since `UNIX_EPOCH`.
