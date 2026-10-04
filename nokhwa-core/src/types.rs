@@ -607,13 +607,13 @@ pub struct FrameRate {
 
 impl FrameRate {
     pub fn new(mut numerator: u32, mut denominator: u32) -> Self {
-        if numerator > 1 && numerator < denominator{
+        if numerator > 1 && numerator < denominator {
             if denominator % numerator != 0 {
                 return Self { fps: None };
             } else {
                 denominator = denominator / numerator;
                 numerator = 1;
-            } 
+            }
         }
         // Neither numerator nor denominator can be zero
         if numerator != 1 || denominator == 0 {

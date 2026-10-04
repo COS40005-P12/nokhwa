@@ -31,7 +31,7 @@ use crate::traits::{
 };
 use crate::types::{
     ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo, ControlValueSetter,
-    FrameFormat, KnownCameraControl, Resolution, FrameRate,
+    FrameFormat, FrameRate, KnownCameraControl, Resolution,
 };
 
 /// Build a deterministic [`CameraInfo`] for tests.
@@ -63,7 +63,11 @@ pub fn mock_frame(width: u32, height: u32, format: FrameFormat) -> Buffer {
 }
 
 fn default_format() -> CameraFormat {
-    CameraFormat::new(Resolution::new(640, 480), FrameFormat::YUYV, FrameRate::from_fps(30))
+    CameraFormat::new(
+        Resolution::new(640, 480),
+        FrameFormat::YUYV,
+        FrameRate::from_fps(30),
+    )
 }
 
 /// A simple continuous-frame mock backend.

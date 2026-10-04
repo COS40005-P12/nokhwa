@@ -823,7 +823,6 @@ macro_rules! __nokhwa_take_events_pick {
 mod uri_scheme_tests {
     use nokhwa_core::looks_like_url_scheme;
 
-
     #[test]
     fn detects_all_known_schemes() {
         for s in [
@@ -897,7 +896,7 @@ mod uri_scheme_tests {
 #[cfg(test)]
 mod open_request_tests {
     use super::OpenRequest;
-    use nokhwa_core::types::{CameraFormat, FrameFormat, Resolution, FrameRate};
+    use nokhwa_core::types::{CameraFormat, FrameFormat, FrameRate, Resolution};
 
     /// `OpenRequest::any()` produces a request with no specific
     /// format. `open()` translates `format == None` to
@@ -917,7 +916,11 @@ mod open_request_tests {
     /// resolution / framerate.
     #[test]
     fn with_format_round_trips() {
-        let fmt = CameraFormat::new(Resolution::new(1920, 1080), FrameFormat::MJPEG, FrameRate::from_fps(30));
+        let fmt = CameraFormat::new(
+            Resolution::new(1920, 1080),
+            FrameFormat::MJPEG,
+            FrameRate::from_fps(30),
+        );
         let req = OpenRequest::with_format(fmt);
         assert_eq!(req.format(), Some(fmt));
     }
@@ -942,7 +945,11 @@ mod open_request_tests {
     #[test]
     fn copy_semantics_preserved() {
         fn take_by_value(_r: OpenRequest) {}
-        let fmt = CameraFormat::new(Resolution::new(640, 480), FrameFormat::YUYV, FrameRate::from_fps(30));
+        let fmt = CameraFormat::new(
+            Resolution::new(640, 480),
+            FrameFormat::YUYV,
+            FrameRate::from_fps(30),
+        );
         let req = OpenRequest::with_format(fmt);
         take_by_value(req);
         assert_eq!(req.format(), Some(fmt), "OpenRequest must still be Copy");
