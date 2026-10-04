@@ -606,8 +606,16 @@ pub struct FrameRate {
 }
 
 impl FrameRate {
-    pub fn new(numerator: u32, denominator: u32) -> Self {
-        // Neither numerator or denominator can be zero
+    pub fn new(mut numerator: u32, mut denominator: u32) -> Self {
+        if numerator > 1 && numerator < denominator{
+            if denominator % numerator != 0 {
+                return Self { fps: None };
+            } else {
+                denominator = denominator / numerator;
+                numerator = 1;
+            } 
+        }
+        // Neither numerator nor denominator can be zero
         if numerator != 1 || denominator == 0 {
             Self { fps: None }
         } else {
@@ -615,6 +623,10 @@ impl FrameRate {
                 fps: Some(denominator),
             }
         }
+    }
+
+    pub fn fps(&self) -> Option<u32> {
+        self.fps
     }
 
     // Helper function to check if the framerate exists. If it does not, then the framerate is invalid.
@@ -628,7 +640,7 @@ impl FrameRate {
 
     /// If framerate exists, returns the numerator.
     ///
-    /// If framerate does not exists, returns 0.
+    /// If framerate does not exists, returns None.
     pub fn numerator(&self) -> Option<u32> {
         match self.fps {
             Some(_) => Some(1),
