@@ -31,7 +31,7 @@ use crate::traits::{
 };
 use crate::types::{
     ApiBackend, CameraControl, CameraFormat, CameraIndex, CameraInfo, ControlValueSetter,
-    FrameFormat, KnownCameraControl, Resolution,
+    FrameFormat, KnownCameraControl, Resolution, FrameRate,
 };
 
 /// Build a deterministic [`CameraInfo`] for tests.
