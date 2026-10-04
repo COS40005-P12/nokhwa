@@ -602,74 +602,64 @@ impl Ord for Resolution {
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct FrameRate {
-    fraction: Option<Ratio<u32>>,
+    fps: Option<u32>,
 }
 
 impl FrameRate {
     pub fn new(numerator: u32, denominator: u32) -> Self {
         // Neither numerator or denominator can be zero
-        if denominator == 0 || numerator == 0 {
-            Self { fraction: None }
+        if numerator != 1 || denominator == 0 {
+            Self { fps: None }
         } else {
             Self {
-                fraction: Some(Ratio::<u32>::new(numerator, denominator)),
+                fps: Some(denominator),
             }
         }
     }
 
     // Helper function to check if the framerate exists. If it does not, then the framerate is invalid.
     pub fn exists(&self) -> bool {
-        self.fraction.is_some()
+        self.fps.is_some()
     }
 
     pub fn from_fps(fps: u32) -> Self {
-        Self {
-            fraction: Some(Ratio::<u32>::new(fps, 1)),
-        }
+        Self { fps: Some(fps) }
     }
 
     /// If framerate exists, returns the numerator.
     ///
     /// If framerate does not exists, returns 0.
-    pub fn numerator(&self) -> u32 {
-        match self.fraction {
-            Some(ratio) => *ratio.numer(),
-            None => 0,
+    pub fn numerator(&self) -> Option<u32> {
+        match self.fps {
+            Some(_) => Some(1),
+            None => None,
         }
     }
 
     /// If framerate exists, returns the denominator.
     ///
-    /// If framerate does not exists, returns 0.
-    pub fn denominator(&self) -> u32 {
-        match self.fraction {
-            Some(ratio) => *ratio.denom(),
-            None => 0,
-        }
+    /// If framerate does not exists, returns None.
+    pub fn denominator(&self) -> Option<u32> {
+        self.fps
     }
 }
 
 impl Default for FrameRate {
     fn default() -> Self {
-        FrameRate {
-            fraction: Some(Ratio::<u32>::new(30, 1)),
-        }
+        FrameRate { fps: Some(30) }
     }
 }
 
 impl Display for FrameRate {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self.fraction {
-            Some(_) => write!(f, "{}/{}", self.numerator(), self.denominator()),
+        match self.fps {
+            Some(_) => write!(
+                f,
+                "{}/{}",
+                self.numerator().unwrap_or(0),
+                self.denominator().unwrap_or(0)
+            ),
             None => write!(f, ""),
-        }
-    }
-}
-
-impl From<Ratio<u32>> for FrameRate {
-    fn from(value: Ratio<u32>) -> Self {
-        FrameRate {
-            fraction: Some(value),
         }
     }
 }
@@ -682,27 +672,22 @@ impl Sub for FrameRate {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        if self.fraction == None || rhs.fraction == None {
+        if self.fps == None || rhs.fps == None {
             // This will build a FrameRate with a None value, which is invalid.
             // This should be avoided where possible.
-            FrameRate::new(0, 0)
+            FrameRate { fps: None }
         } else {
-            let lhs: Ratio<i32> = Ratio::<i32>::new(
-                *self.fraction.unwrap().numer() as i32,
-                *self.fraction.unwrap().denom() as i32,
-            );
-            let rhs: Ratio<i32> = Ratio::<i32>::new(
-                *rhs.fraction.unwrap().numer() as i32,
-                *rhs.fraction.unwrap().denom() as i32,
-            );
+            let lhs: Ratio<i32> = Ratio::<i32>::new(1, self.fps.unwrap() as i32);
+            let rhs: Ratio<i32> = Ratio::<i32>::new(1, rhs.fps.unwrap() as i32);
 
             let result = lhs - rhs;
 
+            if *result.numer() != 1 || *result.denom() == 0 {
+                return FrameRate { fps: None };
+            }
+
             FrameRate {
-                fraction: Some(Ratio::<u32>::new(
-                    result.numer().abs() as u32,
-                    result.denom().abs() as u32,
-                )),
+                fps: Some(result.denom().unsigned_abs() as u32),
             }
         }
     }
