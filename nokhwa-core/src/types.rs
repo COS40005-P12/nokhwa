@@ -4,6 +4,7 @@ use std::{
         Display,
         Formatter,
     },
+    num::NonZeroU32,
     ops::Sub,
     str::FromStr,
 };
@@ -617,6 +618,9 @@ impl Ord for Resolution {
 /// (where the denominator for the fps ratio is zero).
 /// In these cases, the framerate will instead be None.
 /// This must be handled by each call to get the framerate.
+///
+/// The value `fps` must be a non-zero natural number
+/// (i.e. A positive integer)
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct FrameRate {
@@ -625,6 +629,9 @@ pub struct FrameRate {
 
 impl FrameRate {
     pub fn new(mut numerator: u32, mut denominator: u32) -> Self {
+        if numerator > denominator {
+            return Self { fps: None };
+        }
         if numerator > 1 && numerator < denominator {
             if denominator % numerator != 0 {
                 return Self { fps: None };
@@ -638,34 +645,38 @@ impl FrameRate {
             Self { fps: None }
         } else {
             Self {
-                fps: Some(denominator),
+                fps: NonZeroU32::new(denominator),
             }
         }
     }
 
     pub fn fps(&self) -> Option<u32> {
-        self.fps
+        match self.fps {
+            Some(fps) => Some(fps.get()),
+            None => None,
+        }
     }
 
     pub fn fps_or_err(&self) -> Result<u32, NokhwaError> {
         match self.fps {
+            Some(fps) => Ok(fps.get()),
             None => Err(NokhwaError::GetPropertyError {
                 property: "Framerate".to_string(),
                 error: "Framerate is not defined.".to_string(),
             }),
-            Some(fps) => Ok(fps),
         }
     }
 
-    // Helper function to check if the framerate exists. If it does not, then
-    // the framerate is invalid.
+    /// Helper function to check if the framerate exists. If it does not, then
+    /// the framerate is invalid.
     pub fn exists(&self) -> bool {
         self.fps.is_some()
     }
 
     pub fn from_fps(fps: u32) -> Self {
-        let fps = if fps == 0 { None } else { Some(fps) };
-        Self { fps }
+        Self {
+            fps: NonZeroU32::new(fps),
+        }
     }
 
     /// If framerate exists, returns the numerator.
@@ -682,13 +693,16 @@ impl FrameRate {
     ///
     /// If framerate does not exists, returns None.
     pub fn denominator(&self) -> Option<u32> {
-        self.fps
+        match self.fps {
+            Some(fps) => Some(fps.get()),
+            None => None,
+        }
     }
 }
 
 impl Default for FrameRate {
     fn default() -> Self {
-        FrameRate { fps: Some(30) }
+        FrameRate { fps: NonZeroU32::new(30) }
     }
 }
 
@@ -715,23 +729,27 @@ impl Sub for FrameRate {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        if self.fps == None || rhs.fps == None {
-            // This will build a FrameRate with a None value, which is invalid.
-            // This should be avoided where possible.
-            FrameRate { fps: None }
-        } else {
-            let lhs: Ratio<i32> = Ratio::<i32>::new(1, self.fps.unwrap() as i32);
-            let rhs: Ratio<i32> = Ratio::<i32>::new(1, rhs.fps.unwrap() as i32);
-
-            let result = lhs - rhs;
-
-            if *result.numer() != 1 || *result.denom() == 0 {
-                return FrameRate { fps: None };
-            }
-
-            FrameRate {
-                fps: Some(result.denom().unsigned_abs() as u32),
-            }
+        match self.fps {
+            Some(lhsfps) => {
+                match rhs.fps {
+                    Some(rhsfps) => {
+                        let lhs: Ratio<i32> = Ratio::<i32>::new(1, lhsfps.get() as i32);
+                        let rhs: Ratio<i32> = Ratio::<i32>::new(1, rhsfps.get() as i32);
+            
+                        let result = lhs - rhs;
+            
+                        if *result.numer() != 1 || *result.denom() == 0 {
+                            return FrameRate { fps: None };
+                        }
+            
+                        FrameRate {
+                            fps: NonZeroU32::new(result.denom().unsigned_abs()),
+                        }
+                    },
+                    None => FrameRate { fps: None }
+                }
+            },
+            None => FrameRate { fps: None }
         }
     }
 }
